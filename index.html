@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Origins of Cloth — Society of Cloth</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -16,11 +14,11 @@
 
   <style>
     :root {
-      --paper: #f6f2ea;
-      --paper-soft: #efe8dc;
+      --paper: #f5f1e8;
+      --paper-soft: #ece5d7;
       --ink: #1d1b18;
-      --line: #c9c0b1;
-      --muted: #7d7466;
+      --line: #b9ae9c;
+      --muted: #7a7264;
       --accent: #8a5a3b;
     }
 
@@ -36,101 +34,91 @@
       color: var(--ink);
       font-family: "Inter", sans-serif;
       font-weight: 300;
+      overflow: hidden;
     }
 
     .page {
       position: relative;
       height: 100%;
-      overflow: hidden;
     }
 
     .intro {
       position: absolute;
-      z-index: 1100;
-      top: 36px;
-      left: 40px;
-      max-width: 360px;
+      z-index: 20;
+      top: 46px;
+      left: 52px;
+      max-width: 390px;
       pointer-events: none;
     }
 
     .eyebrow {
       font-size: 10px;
-      letter-spacing: 0.28em;
+      letter-spacing: 0.3em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
     h1 {
       font-family: "Cormorant Garamond", serif;
       font-weight: 400;
-      font-size: clamp(38px, 5vw, 68px);
-      line-height: 0.95;
-      margin: 0 0 16px;
+      font-size: clamp(42px, 5.5vw, 76px);
+      line-height: 0.92;
+      margin: 0 0 18px;
     }
 
     .intro p {
       font-size: 14px;
-      line-height: 1.65;
+      line-height: 1.7;
       color: var(--muted);
+      max-width: 310px;
       margin: 0;
     }
 
     #map {
       position: absolute;
       inset: 0;
-      background: var(--paper);
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
-    .leaflet-container {
-      background: var(--paper);
-      font-family: "Inter", sans-serif;
+    .sphere {
+      fill: var(--paper-soft);
+      stroke: var(--ink);
+      stroke-width: 0.5;
     }
 
-    .leaflet-control-zoom {
-      border: none !important;
-      box-shadow: none !important;
+    .country {
+      fill: var(--paper-soft);
+      stroke: var(--ink);
+      stroke-width: 0.32;
+      vector-effect: non-scaling-stroke;
     }
 
-    .leaflet-control-zoom a {
-      background: rgba(246, 242, 234, 0.9) !important;
-      color: var(--ink) !important;
-      border: 1px solid var(--line) !important;
-      border-radius: 0 !important;
-      width: 34px !important;
-      height: 34px !important;
-      line-height: 32px !important;
-      font-weight: 300 !important;
+    .graticule {
+      fill: none;
+      stroke: rgba(29, 27, 24, 0.06);
+      stroke-width: 0.4;
     }
 
-    .leaflet-control-attribution {
-      background: transparent !important;
-      color: var(--muted) !important;
-      font-size: 9px !important;
-    }
-
-    .leaflet-control-attribution a {
-      color: var(--muted) !important;
-    }
-
-    /* Square fabric-swatch marker */
+    /* Square fabric swatch pin */
     .swatch {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       padding: 2px;
       background: var(--paper);
       border: 1px solid var(--ink);
-      box-shadow: 0 1px 0 rgba(29, 27, 24, 0.12);
       cursor: pointer;
       transition:
-        transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
-        box-shadow 0.25s ease;
+        transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.28s ease;
     }
 
     .swatch:hover,
     .swatch:focus-visible {
-      transform: scale(1.08);
-      box-shadow: 0 6px 18px rgba(29, 27, 24, 0.18);
+      transform: scale(1.12);
+      box-shadow: 0 8px 22px rgba(29, 27, 24, 0.18);
       outline: none;
     }
 
@@ -139,80 +127,20 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      filter: saturate(0.86) contrast(0.98);
+      filter: saturate(0.82) contrast(0.98);
     }
 
-    /* Right-side vertical material filter */
-    .material-panel {
-      position: absolute;
-      z-index: 1200;
-      top: 50%;
-      right: 0;
-      transform: translateY(-50%);
-      width: 250px;
-      background: rgba(246, 242, 234, 0.94);
-      border-left: 1px solid var(--line);
-      padding: 28px 24px;
-      backdrop-filter: blur(6px);
-    }
-
-    .panel-label {
-      font-size: 10px;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
-
-    .material-list {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .material-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 11px 0;
-      background: none;
-      border: none;
-      border-bottom: 1px solid rgba(201, 192, 177, 0.55);
-      color: var(--ink);
-      font-family: "Inter", sans-serif;
-      font-size: 12px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-    }
-
-    .material-option:hover {
-      opacity: 0.65;
-    }
-
-    .material-option.active {
-      color: var(--accent);
-    }
-
-    .material-count {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-    }
-
-    /* Detail overlay */
+    /* Expanding detail sheet */
     .overlay {
       position: fixed;
       inset: 0;
-      z-index: 1500;
+      z-index: 100;
       display: grid;
       place-items: center;
       background: rgba(29, 27, 24, 0.42);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.32s ease;
+      transition: opacity 0.3s ease;
     }
 
     .overlay.open {
@@ -222,16 +150,16 @@
 
     .sheet {
       position: relative;
-      width: min(880px, calc(100% - 40px));
-      max-height: min(86vh, 760px);
+      width: min(920px, calc(100% - 40px));
+      max-height: min(86vh, 740px);
       overflow: auto;
       background: var(--paper);
       border: 1px solid var(--ink);
-      transform: scale(0.72);
+      transform: scale(0.68);
       opacity: 0;
       transition:
         transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
-        opacity 0.3s ease;
+        opacity 0.28s ease;
     }
 
     .overlay.open .sheet {
@@ -241,16 +169,16 @@
 
     .sheet-grid {
       display: grid;
-      grid-template-columns: 300px 1fr;
+      grid-template-columns: 320px 1fr;
     }
 
     .swatch-column {
+      padding: 36px;
       border-right: 1px solid var(--line);
-      padding: 34px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 40px;
+      gap: 42px;
     }
 
     .large-swatch {
@@ -266,56 +194,6 @@
       object-fit: cover;
     }
 
-    .sheet-info {
-      padding: 38px 42px;
-    }
-
-    .sheet-eyebrow {
-      font-size: 10px;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-
-    .sheet-info h2 {
-      font-family: "Cormorant Garamond", serif;
-      font-weight: 400;
-      font-size: 42px;
-      line-height: 1;
-      margin: 0 0 22px;
-    }
-
-    .facts {
-      display: grid;
-      gap: 0;
-      margin-bottom: 26px;
-    }
-
-    .fact {
-      display: grid;
-      grid-template-columns: 130px 1fr;
-      gap: 18px;
-      padding: 12px 0;
-      border-top: 1px solid var(--line);
-      font-size: 13px;
-    }
-
-    .fact-label {
-      color: var(--muted);
-      font-size: 10px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      padding-top: 2px;
-    }
-
-    .description {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #4a443c;
-      margin: 0 0 24px;
-    }
-
     .tags {
       display: flex;
       flex-wrap: wrap;
@@ -323,25 +201,74 @@
     }
 
     .tag {
-      padding: 6px 12px;
+      padding: 7px 12px;
       border: 1px solid var(--ink);
       font-size: 10px;
       letter-spacing: 0.16em;
       text-transform: uppercase;
     }
 
+    .sheet-info {
+      padding: 42px 46px;
+    }
+
+    .sheet-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .sheet-info h2 {
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 400;
+      font-size: 46px;
+      line-height: 1;
+      margin: 0 0 26px;
+    }
+
+    .facts {
+      margin-bottom: 28px;
+    }
+
+    .fact {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 20px;
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .fact-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 3px;
+    }
+
+    .description {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #4b453c;
+      margin: 0;
+    }
+
     .close {
       position: absolute;
-      top: 16px;
-      right: 16px;
       z-index: 2;
-      width: 36px;
-      height: 36px;
+      top: 18px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
       border: 1px solid var(--ink);
       background: var(--paper);
       color: var(--ink);
       font-size: 18px;
       cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
     }
 
     .close:hover {
@@ -349,34 +276,11 @@
       color: var(--paper);
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 950px) {
       .intro {
+        top: 24px;
         left: 22px;
-        top: 22px;
         max-width: calc(100% - 44px);
-      }
-
-      .material-panel {
-        top: auto;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        transform: none;
-        width: 100%;
-        border-top: 1px solid var(--line);
-        border-left: none;
-        padding: 18px 22px;
-      }
-
-      .material-list {
-        flex-direction: row;
-        overflow-x: auto;
-        gap: 14px;
-      }
-
-      .material-option {
-        border-bottom: none;
-        white-space: nowrap;
       }
 
       .sheet-grid {
@@ -390,7 +294,7 @@
       }
 
       .sheet-info {
-        padding: 26px;
+        padding: 28px;
       }
     }
   </style>
@@ -407,16 +311,19 @@
       </p>
     </div>
 
-    <div id="map"></div>
-
-    <aside class="material-panel" aria-label="Filter designers by material">
-      <div class="panel-label">Material</div>
-      <div class="material-list" id="materialList"></div>
-    </aside>
+    <svg
+      id="map"
+      aria-label="World map showing where designers design, manufacture, and source materials"
+    ></svg>
   </div>
 
   <div class="overlay" id="overlay">
-    <article class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetName">
+    <article
+      class="sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sheetName"
+    >
       <button class="close" id="closeSheet" aria-label="Close">×</button>
 
       <div class="sheet-grid">
@@ -424,6 +331,7 @@
           <div class="large-swatch">
             <img id="sheetSwatch" src="" alt="" />
           </div>
+
           <div class="tags" id="sheetTags"></div>
         </div>
 
@@ -459,13 +367,14 @@
     </article>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
   <script>
     const designers = [
       {
-        id: "example-cotton",
-        name: "Studio Name",
+        id: "atelier-one",
+        name: "Atelier One",
         location: "Delhi, India",
         lat: 28.6139,
         lng: 77.209,
@@ -473,77 +382,156 @@
         manufacturedIn: "Jaipur, Rajasthan, India",
         fibreOrigin: "Organic cotton, Gujarat, India",
         craft: "Handloom weaving",
-        materials: ["cotton"],
         swatch: "images/cotton-swatch.jpg",
         description:
-          "This studio works with a regional weaving collective to create handloom cotton textiles. Its production is limited and centred on preserving local craft knowledge.",
+          "This studio works with a regional weaving collective to create handloom cotton textiles. Production is limited and centred on preserving local craft knowledge.",
         tags: ["Organic cotton", "Handloom", "Limited run"]
-      }
-    ];
-
-    const materials = [
-      { id: "all", label: "All" },
-      { id: "cotton", label: "Cotton" },
-      { id: "linen", label: "Linen" },
-      { id: "silk", label: "Silk" },
-      { id: "wool", label: "Wool" },
-      { id: "hemp", label: "Hemp" },
-      { id: "recycled", label: "Recycled" }
-    ];
-
-    const map = L.map("map", {
-      center: [24, 45],
-      zoom: 3,
-      zoomControl: true,
-      attributionControl: true,
-      worldCopyJump: true
-    });
-
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+      },
       {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 18
+        id: "linen-house",
+        name: "Linen House",
+        location: "Lisbon, Portugal",
+        lat: 38.7223,
+        lng: -9.1393,
+        designedIn: "Lisbon, Portugal",
+        manufacturedIn: "Guimarães, Portugal",
+        fibreOrigin: "European flax, Normandy, France",
+        craft: "Woven linen",
+        swatch: "images/linen-swatch.jpg",
+        description:
+          "Linen House creates washed linen essentials using European flax. Its production partner is located within the same region as its design studio.",
+        tags: ["European flax", "Woven", "Small batch"]
+      },
+      {
+        id: "silk-atelier",
+        name: "Silk Atelier",
+        location: "Como, Italy",
+        lat: 45.8081,
+        lng: 9.0852,
+        designedIn: "Como, Italy",
+        manufacturedIn: "Como, Italy",
+        fibreOrigin: "Peace silk, Karnataka, India",
+        craft: "Silk weaving and natural dyeing",
+        swatch: "images/silk-swatch.jpg",
+        description:
+          "Silk Atelier creates small-run silk pieces using a traceable peace-silk supplier. The studio publishes fibre origin, dyeing method, and mill information for each collection.",
+        tags: ["Peace silk", "Natural dye", "Traceable"]
+      },
+      {
+        id: "wool-workshop",
+        name: "Wool Workshop",
+        location: "Yorkshire, England",
+        lat: 53.9603,
+        lng: -1.0821,
+        designedIn: "Yorkshire, England",
+        manufacturedIn: "Yorkshire, England",
+        fibreOrigin: "British wool, Yorkshire",
+        craft: "Knitting and finishing",
+        swatch: "images/wool-swatch.jpg",
+        description:
+          "Wool Workshop blends locally sourced wool with reclaimed textile fibre. Knitting and finishing take place in the same region as its design studio.",
+        tags: ["British wool", "Recycled fibre", "Local production"]
       }
-    ).addTo(map);
+    ];
 
-    const markers = new Map();
+    const svg = d3.select("#map");
+    const pinLayer = svg.append("g").attr("class", "pin-layer");
 
-    function addDesigner(designer) {
-      const marker = L.marker([designer.lat, designer.lng], {
-        icon: L.divIcon({
-          className: "",
-          html: `
-            <div
-              class="swatch"
-              tabindex="0"
-              role="button"
-              aria-label="View ${designer.name}"
-            >
-              <img src="${designer.swatch}" alt="Fabric swatch for ${designer.name}" />
-            </div>
-          `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22]
-        })
+    const projection = d3
+      .geoNaturalEarth1()
+      .rotate([-11, 0])
+      .fitExtent(
+        [
+          [110, 130],
+          [window.innerWidth - 110, window.innerHeight - 120]
+        ],
+        { type: "Sphere" }
+      );
+
+    const path = d3.geoPath(projection);
+
+    function renderMap(world) {
+      const countries = topojson.feature(
+        world,
+        world.objects.countries
+      );
+
+      const graticule = d3.geoGraticule10();
+
+      svg
+        .append("path")
+        .datum(graticule)
+        .attr("class", "graticule")
+        .attr("d", path);
+
+      svg
+        .append("g")
+        .selectAll("path")
+        .data(countries.features)
+        .enter()
+        .append("path")
+        .attr("class", "country")
+        .attr("d", path);
+
+      renderPins(designers);
+    }
+
+    function createPin(designer) {
+      const [x, y] = projection([designer.lng, designer.lat]);
+
+      const pin = pinLayer
+        .append("foreignObject")
+        .attr("x", x - 21)
+        .attr("y", y - 21)
+        .attr("width", 42)
+        .attr("height", 42)
+        .attr("tabindex", 0)
+        .attr("role", "button")
+        .attr("aria-label", `View ${designer.name}`)
+        .html(`
+          <div class="swatch">
+            <img
+              src="${designer.swatch}"
+              alt="Fabric swatch for ${designer.name}"
+            />
+          </div>
+        `);
+
+      pin.on("click", () => openSheet(designer));
+
+      pin.on("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openSheet(designer);
+        }
       });
 
-      marker.on("click", () => openSheet(designer));
-      marker.addTo(map);
-      markers.set(designer.id, marker);
+      return pin;
+    }
+
+    function renderPins(visibleDesigners) {
+      pinLayer.selectAll("foreignObject").remove();
+      visibleDesigners.forEach(createPin);
     }
 
     function openSheet(designer) {
       document.getElementById("sheetSwatch").src = designer.swatch;
       document.getElementById("sheetSwatch").alt =
         `Fabric swatch for ${designer.name}`;
-      document.getElementById("sheetLocation").textContent = designer.location;
+
+      document.getElementById("sheetLocation").textContent =
+        designer.location;
+
       document.getElementById("sheetName").textContent = designer.name;
-      document.getElementById("sheetDesigned").textContent = designer.designedIn;
-      document.getElementById("sheetMade").textContent = designer.manufacturedIn;
-      document.getElementById("sheetFibre").textContent = designer.fibreOrigin;
+      document.getElementById("sheetDesigned").textContent =
+        designer.designedIn;
+
+      document.getElementById("sheetMade").textContent =
+        designer.manufacturedIn;
+
+      document.getElementById("sheetFibre").textContent =
+        designer.fibreOrigin;
+
       document.getElementById("sheetCraft").textContent = designer.craft;
       document.getElementById("sheetDescription").textContent =
         designer.description;
@@ -569,58 +557,11 @@
       if (event.key === "Escape") closeSheet();
     });
 
-    function renderFilters() {
-      const list = document.getElementById("materialList");
-
-      list.innerHTML = materials
-        .map(material => {
-          const count =
-            material.id === "all"
-              ? designers.length
-              : designers.filter(designer =>
-                  designer.materials.includes(material.id)
-                ).length;
-
-          return `
-            <button
-              class="material-option ${material.id === "all" ? "active" : ""}"
-              data-material="${material.id}"
-            >
-              <span>${material.label}</span>
-              <span class="material-count">${count}</span>
-            </button>
-          `;
-        })
-        .join("");
-
-      list.querySelectorAll(".material-option").forEach(button => {
-        button.addEventListener("click", () => {
-          list
-            .querySelectorAll(".material-option")
-            .forEach(option => option.classList.remove("active"));
-
-          button.classList.add("active");
-          filterDesigners(button.dataset.material);
-        });
-      });
-    }
-
-    function filterDesigners(materialId) {
-      designers.forEach(designer => {
-        const marker = markers.get(designer.id);
-        const visible =
-          materialId === "all" || designer.materials.includes(materialId);
-
-        if (visible) {
-          if (!map.hasLayer(marker)) marker.addTo(map);
-        } else {
-          map.removeLayer(marker);
-        }
-      });
-    }
-
-    designers.forEach(addDesigner);
-    renderFilters();
+    fetch(
+      "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
+    )
+      .then(response => response.json())
+      .then(renderMap);
   </script>
 </body>
 </html>
