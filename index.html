@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Origins of Cloth</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --cream: #f7f3ec;
+      --ink: #211d19;
+      --clay: #a4633f;
+      --sand: #d9c8ae;
+      --thread: #7c6a54;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--cream);
+    }
+
+    header {
+      position: fixed;
+      z-index: 1200;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 24px;
+      background: rgba(247, 243, 236, 0.94);
+      border-bottom: 1px solid rgba(33, 29, 25, 0.12);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    .brand span {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--thread);
+      text-transform: uppercase;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--thread);
+      background: transparent;
+      color: var(--ink);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      background: var(--sand);
+    }
+
+    .filter-btn.active {
+      background: var(--ink);
+      color: var(--cream);
+      border-color: var(--ink);
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      height: 100%;
+    }
+
+    /* Fabric-swatch map marker */
+    .swatch-marker {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid var(--cream);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .swatch-marker:hover,
+    .swatch-marker:focus {
+      transform: scale(1.1);
+      outline: none;
+    }
+
+    .swatch-marker img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Expanding detail panel */
+    .detail-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1400;
+      display: grid;
+      place-items: center;
+      background: rgba(33, 29, 25, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .detail-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .detail-card {
+      width: min(760px, calc(100% - 32px));
+      max-height: 84vh;
+      overflow: auto;
+      background: var(--cream);
+      border: 1px solid rgba(33, 29, 25, 0.15);
+      border-radius: 18px;
+      padding: 0;
+      transform: scale(0.55);
+      opacity: 0;
+      transition:
+        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.35s ease;
+    }
+
+    .detail-backdrop.open .detail-card {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .detail-hero {
+      position: relative;
+      height: 260px;
+      overflow: hidden;
+    }
+
+    .detail-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .detail-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgba(33, 29, 25, 0.78),
+        rgba(33, 29, 25, 0)
+      );
+    }
+
+    .detail-title {
+      position: absolute;
+      bottom: 20px;
+      left: 24px;
+      right: 24px;
+      color: var(--cream);
+    }
+
+    .detail-title h2 {
+      margin: 0 0 6px;
+      font-size: 30px;
+    }
+
+    .detail-title p {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    .detail-body {
+      padding: 24px;
+    }
+
+    .materials {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .material-tag {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--sand);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .detail-facts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .fact {
+      border-top: 1px solid rgba(33, 29, 25, 0.15);
+      padding-top: 10px;
+    }
+
+    .fact-label {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--thread);
+    }
+
+    .fact-value {
+      margin-top: 4px;
+      font-size: 15px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(247, 243, 236, 0.92);
+      color: var(--ink);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .credit {
+      font-size: 12px;
+      color: var(--thread);
+      margin-top: 18px;
+    }
+
+    @media (max-width: 640px) {
+      header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .filters {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1 class="brand">
+      Origins of Cloth
+      <span>A Society of Cloth project</span>
+    </h1>
+
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-material="all">All</button>
+      <button class="filter-btn" data-material="cotton">Cotton</button>
+      <button class="filter-btn" data-material="linen">Linen</button>
+      <button class="filter-btn" data-material="silk">Silk</button>
+      <button class="filter-btn" data-material="wool">Wool</button>
+      <button class="filter-btn" data-material="recycled">Recycled</button>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="detail-backdrop" id="detailBackdrop">
+    <article class="detail-card" id="detailCard" role="dialog" aria-modal="true">
+      <button class="close-btn" id="closeDetail" aria-label="Close designer details">×</button>
+
+      <div class="detail-hero">
+        <img id="detailImage" src="" alt="" />
+        <div class="detail-title">
+          <h2 id="detailName"></h2>
+          <p id="detailLocation"></p>
+        </div>
+      </div>
+
+      <div class="detail-body">
+        <div class="materials" id="detailMaterials"></div>
+
+        <div class="detail-facts">
+          <div class="fact">
+            <div class="fact-label">Designed in</div>
+            <div class="fact-value" id="detailDesigned"></div>
+          </div>
+
+          <div class="fact">
+            <div class="fact-label">Manufactured in</div>
+            <div class="fact-value" id="detailManufactured"></div>
+          </div>
+
+          <div class="fact">
+            <div class="fact-label">Material source</div>
+            <div class="fact-value" id="detailSource"></div>
+          </div>
+        </div>
+
+        <p id="detailDescription"></p>
+        <p class="credit" id="detailCredit"></p>
+      </div>
+    </article>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // Replace these sample entries with real designer, mill, farm, or atelier data.
+    const designers = [
+      {
+        id: "atelier-one",
+        name: "Atelier One",
+        location: "London, England",
+        lat: 51.5074,
+        lng: -0.1278,
+        designedIn: "London, England",
+        manufacturedIn: "Porto, Portugal",
+        materialSource: "Organic cotton, Portugal",
+        materials: ["cotton", "recycled"],
+        swatchImage: "images/cotton-swatch.jpg",
+        heroImage: "images/cotton-hero.jpg",
+        description:
+          "Atelier One works with a family-run mill in Porto to produce low-waste cotton garments. Its fabric is woven from certified organic cotton and offcut-derived recycled fibre.",
+        credit: "Sample entry — replace with verified supply-chain information."
+      },
+      {
+        id: "linen-house",
+        name: "Linen House",
+        location: "Lisbon, Portugal",
+        lat: 38.7223,
+        lng: -9.1393,
+        designedIn: "Lisbon, Portugal",
+        manufacturedIn: "Guimarães, Portugal",
+        materialSource: "European flax, Normandy, France",
+        materials: ["linen"],
+        swatchImage: "images/linen-swatch.jpg",
+        heroImage: "images/linen-hero.jpg",
+        description:
+          "Linen House designs washed linen essentials using European flax. Its production partner is located within 200 km of its design studio.",
+        credit: "Sample entry — replace with verified supply-chain information."
+      },
+      {
+        id: "silk-atelier",
+        name: "Silk Atelier",
+        location: "Como, Italy",
+        lat: 45.8081,
+        lng: 9.0852,
+        designedIn: "Como, Italy",
+        manufacturedIn: "Como, Italy",
+        materialSource: "Peace silk, Karnataka, India",
+        materials: ["silk"],
+        swatchImage: "images/silk-swatch.jpg",
+        heroImage: "images/silk-hero.jpg",
+        description:
+          "Silk Atelier creates small-run silk pieces using a traceable peace-silk supplier. The studio publishes fibre origin, dyeing method, and mill information for each collection.",
+        credit: "Sample entry — replace with verified supply-chain information."
+      },
+      {
+        id: "wool-workshop",
+        name: "Wool Workshop",
+        location: "Yorkshire, England",
+        lat: 53.9603,
+        lng: -1.0821,
+        designedIn: "Yorkshire, England",
+        manufacturedIn: "Yorkshire, England",
+        materialSource: "British wool, Yorkshire",
+        materials: ["wool", "recycled"],
+        swatchImage: "images/wool-swatch.jpg",
+        heroImage: "images/wool-hero.jpg",
+        description:
+          "Wool Workshop blends locally sourced wool with reclaimed textile fibre. Its knitting and finishing take place in the same region as its design studio.",
+        credit: "Sample entry — replace with verified supply-chain information."
+      }
+    ];
+
+    const map = L.map("map", {
+      center: [48.5, 0],
+      zoom: 4,
+      scrollWheelZoom: true
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const markers = new Map();
+
+    function createSwatchMarker(designer) {
+      const marker = L.marker([designer.lat, designer.lng], {
+        icon: L.divIcon({
+          className: "",
+          html: `
+            <div
+              class="swatch-marker"
+              tabindex="0"
+              role="button"
+              aria-label="View ${designer.name}"
+            >
+              <img src="${designer.swatchImage}" alt="Fabric swatch for ${designer.name}" />
+            </div>
+          `,
+          iconSize: [54, 54],
+          iconAnchor: [27, 27]
+        })
+      });
+
+      marker.on("click", () => openDetail(designer));
+      marker.addTo(map);
+      markers.set(designer.id, marker);
+    }
+
+    function openDetail(designer) {
+      document.getElementById("detailImage").src = designer.heroImage;
+      document.getElementById("detailImage").alt =
+        `Fabric or collection image for ${designer.name}`;
+      document.getElementById("detailName").textContent = designer.name;
+      document.getElementById("detailLocation").textContent = designer.location;
+      document.getElementById("detailDesigned").textContent = designer.designedIn;
+      document.getElementById("detailManufactured").textContent =
+        designer.manufacturedIn;
+      document.getElementById("detailSource").textContent =
+        designer.materialSource;
+      document.getElementById("detailDescription").textContent =
+        designer.description;
+      document.getElementById("detailCredit").textContent = designer.credit;
+
+      document.getElementById("detailMaterials").innerHTML = designer.materials
+        .map(
+          material =>
+            `<span class="material-tag">${material}</span>`
+        )
+        .join("");
+
+      document.getElementById("detailBackdrop").classList.add("open");
+    }
+
+    function closeDetail() {
+      document.getElementById("detailBackdrop").classList.remove("open");
+    }
+
+    document
+      .getElementById("closeDetail")
+      .addEventListener("click", closeDetail);
+
+    document
+      .getElementById("detailBackdrop")
+      .addEventListener("click", event => {
+        if (event.target === event.currentTarget) closeDetail();
+      });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeDetail();
+    });
+
+    function applyFilter(material) {
+      designers.forEach(designer => {
+        const marker = markers.get(designer.id);
+        const matches =
+          material === "all" || designer.materials.includes(material);
+
+        if (matches) {
+          if (!map.hasLayer(marker)) marker.addTo(map);
+        } else {
+          map.removeLayer(marker);
+        }
+      });
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach(item => item.classList.remove("active"));
+
+        button.classList.add("active");
+        applyFilter(button.dataset.material);
+      });
+    });
+
+    designers.forEach(createSwatchMarker);
+  </script>
+</body>
+</html>
