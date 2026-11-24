@@ -269,3 +269,242 @@
       aria-modal="true"
       aria-labelledby="sheetName"
     >
+      <button class="close" id="closeSheet" aria-label="Close">×</button>
+
+      <div class="sheet-grid">
+        <div class="swatch-column">
+          <div class="large-swatch">
+            <img id="sheetSwatch" src="" alt="" />
+          </div>
+
+          <div class="tags" id="sheetTags"></div>
+        </div>
+
+        <div class="sheet-info">
+          <div class="sheet-eyebrow" id="sheetLocation"></div>
+          <h2 id="sheetName"></h2>
+
+          <div class="facts">
+            <div class="fact">
+              <div class="fact-label">Designed</div>
+              <div id="sheetDesigned"></div>
+            </div>
+
+            <div class="fact">
+              <div class="fact-label">Manufactured</div>
+              <div id="sheetMade"></div>
+            </div>
+
+            <div class="fact">
+              <div class="fact-label">Fibre origin</div>
+              <div id="sheetFibre"></div>
+            </div>
+
+            <div class="fact">
+              <div class="fact-label">Craft</div>
+              <div id="sheetCraft"></div>
+            </div>
+          </div>
+
+          <p class="description" id="sheetDescription"></p>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
+  <script>
+    const designers = [
+      {
+        id: "atelier-one",
+        name: "Atelier One",
+        location: "Delhi, India",
+        lat: 28.6139,
+        lng: 77.209,
+        designedIn: "Delhi, India",
+        manufacturedIn: "Jaipur, Rajasthan, India",
+        fibreOrigin: "Organic cotton, Gujarat, India",
+        craft: "Handloom weaving",
+        swatch: "images/cotton-swatch.jpg",
+        description:
+          "This studio works with a regional weaving collective to create handloom cotton textiles. Production is limited and centred on preserving local craft knowledge.",
+        tags: ["Organic cotton", "Handloom", "Limited run"]
+      },
+      {
+        id: "linen-house",
+        name: "Linen House",
+        location: "Lisbon, Portugal",
+        lat: 38.7223,
+        lng: -9.1393,
+        designedIn: "Lisbon, Portugal",
+        manufacturedIn: "Guimarães, Portugal",
+        fibreOrigin: "European flax, Normandy, France",
+        craft: "Woven linen",
+        swatch: "images/linen-swatch.jpg",
+        description:
+          "Linen House creates washed linen essentials using European flax. Its production partner is located within the same region as its design studio.",
+        tags: ["European flax", "Woven", "Small batch"]
+      },
+      {
+        id: "silk-atelier",
+        name: "Silk Atelier",
+        location: "Como, Italy",
+        lat: 45.8081,
+        lng: 9.0852,
+        designedIn: "Como, Italy",
+        manufacturedIn: "Como, Italy",
+        fibreOrigin: "Peace silk, Karnataka, India",
+        craft: "Silk weaving and natural dyeing",
+        swatch: "images/silk-swatch.jpg",
+        description:
+          "Silk Atelier creates small-run silk pieces using a traceable peace-silk supplier. The studio publishes fibre origin, dyeing method, and mill information for each collection.",
+        tags: ["Peace silk", "Natural dye", "Traceable"]
+      },
+      {
+        id: "wool-workshop",
+        name: "Wool Workshop",
+        location: "Yorkshire, England",
+        lat: 53.9603,
+        lng: -1.0821,
+        designedIn: "Yorkshire, England",
+        manufacturedIn: "Yorkshire, England",
+        fibreOrigin: "British wool, Yorkshire",
+        craft: "Knitting and finishing",
+        swatch: "images/wool-swatch.jpg",
+        description:
+          "Wool Workshop blends locally sourced wool with reclaimed textile fibre. Knitting and finishing take place in the same region as its design studio.",
+        tags: ["British wool", "Recycled fibre", "Local production"]
+      }
+    ];
+
+    const svg = d3.select("#map");
+
+    const projection = d3
+      .geoNaturalEarth1()
+      .rotate([-11, 0])
+      .fitExtent(
+        [
+          [110, 130],
+          [window.innerWidth - 110, window.innerHeight - 120]
+        ],
+        { type: "Sphere" }
+      );
+
+    const path = d3.geoPath(projection);
+
+    function renderMap(world) {
+      const countries = topojson.feature(
+        world,
+        world.objects.countries
+      );
+
+      const graticule = d3.geoGraticule10();
+
+      svg
+        .append("path")
+        .datum(graticule)
+        .attr("class", "graticule")
+        .attr("d", path);
+
+      svg
+        .append("g")
+        .attr("class", "country-layer")
+        .selectAll("path")
+        .data(countries.features)
+        .enter()
+        .append("path")
+        .attr("class", "country")
+        .attr("d", path);
+
+      // This layer is added after the map, so pins appear on top.
+      const pinLayer = svg.append("g").attr("class", "pin-layer");
+
+      designers.forEach(designer => createPin(pinLayer, designer));
+    }
+
+    function createPin(pinLayer, designer) {
+      const [x, y] = projection([designer.lng, designer.lat]);
+
+      const pin = pinLayer
+        .append("foreignObject")
+        .attr("x", x - 21)
+        .attr("y", y - 21)
+        .attr("width", 42)
+        .attr("height", 42)
+        .attr("tabindex", 0)
+        .attr("role", "button")
+        .attr("aria-label", `View ${designer.name}`)
+        .html(`
+          <div class="swatch">
+            <img
+              src="${designer.swatch}"
+              alt="Fabric swatch for ${designer.name}"
+            />
+          </div>
+        `);
+
+      pin.on("click", () => openSheet(designer));
+
+      pin.on("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openSheet(designer);
+        }
+      });
+
+      return pin;
+    }
+
+    function openSheet(designer) {
+      document.getElementById("sheetSwatch").src = designer.swatch;
+      document.getElementById("sheetSwatch").alt =
+        `Fabric swatch for ${designer.name}`;
+
+      document.getElementById("sheetLocation").textContent =
+        designer.location;
+
+      document.getElementById("sheetName").textContent = designer.name;
+      document.getElementById("sheetDesigned").textContent =
+        designer.designedIn;
+
+      document.getElementById("sheetMade").textContent =
+        designer.manufacturedIn;
+
+      document.getElementById("sheetFibre").textContent =
+        designer.fibreOrigin;
+
+      document.getElementById("sheetCraft").textContent = designer.craft;
+      document.getElementById("sheetDescription").textContent =
+        designer.description;
+
+      document.getElementById("sheetTags").innerHTML = designer.tags
+        .map(tag => `<span class="tag">${tag}</span>`)
+        .join("");
+
+      document.getElementById("overlay").classList.add("open");
+    }
+
+    function closeSheet() {
+      document.getElementById("overlay").classList.remove("open");
+    }
+
+    document.getElementById("closeSheet").addEventListener("click", closeSheet);
+
+    document.getElementById("overlay").addEventListener("click", event => {
+      if (event.target === event.currentTarget) closeSheet();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeSheet();
+    });
+
+    fetch(
+      "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
+    )
+      .then(response => response.json())
+      .then(renderMap);
+  </script>
+</body>
+</html>
